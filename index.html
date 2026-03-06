@@ -34,6 +34,9 @@
 import * as THREE from "three";
 import { OrbitControls } from "https://cdn.jsdelivr.net/npm/three@0.158.0/examples/jsm/controls/OrbitControls.js";
 
+const DEFAULT_TITLE_TEXT = "When Yah.";
+const TITLE_STORAGE_KEY = "whenyah-title-text";
+
 const scene = new THREE.Scene();
 scene.fog = new THREE.FogExp2(0x0b122a, 0.00062);
 
@@ -48,20 +51,94 @@ renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.34;
 document.body.appendChild(renderer.domElement);
 
-const uploadPanel = document.createElement("label");
+const uploadPanel = document.createElement("div");
 uploadPanel.style.position = "fixed";
 uploadPanel.style.top = "14px";
 uploadPanel.style.left = "14px";
 uploadPanel.style.zIndex = "30";
-uploadPanel.style.padding = "8px 10px";
+uploadPanel.style.padding = "10px";
 uploadPanel.style.borderRadius = "10px";
 uploadPanel.style.background = "rgba(7, 12, 35, 0.72)";
 uploadPanel.style.border = "1px solid rgba(255,255,255,0.28)";
 uploadPanel.style.color = "#f2e4ba";
 uploadPanel.style.font = "600 12px 'Trebuchet MS', sans-serif";
-uploadPanel.style.cursor = "pointer";
-uploadPanel.textContent = "Pilih Foto Sendiri";
+uploadPanel.style.display = "flex";
+uploadPanel.style.flexDirection = "column";
+uploadPanel.style.gap = "8px";
+uploadPanel.style.minWidth = "220px";
 document.body.appendChild(uploadPanel);
+
+const photoButtonRow = document.createElement("div");
+photoButtonRow.style.display = "flex";
+photoButtonRow.style.gap = "6px";
+uploadPanel.appendChild(photoButtonRow);
+
+const addPhotoBtn = document.createElement("button");
+addPhotoBtn.type = "button";
+addPhotoBtn.textContent = "Tambah Foto";
+addPhotoBtn.style.padding = "6px 8px";
+addPhotoBtn.style.borderRadius = "8px";
+addPhotoBtn.style.border = "1px solid rgba(255,255,255,0.35)";
+addPhotoBtn.style.background = "rgba(242,228,186,0.16)";
+addPhotoBtn.style.color = "#f2e4ba";
+addPhotoBtn.style.cursor = "pointer";
+photoButtonRow.appendChild(addPhotoBtn);
+
+const replacePhotoBtn = document.createElement("button");
+replacePhotoBtn.type = "button";
+replacePhotoBtn.textContent = "Ganti Foto";
+replacePhotoBtn.style.padding = "6px 8px";
+replacePhotoBtn.style.borderRadius = "8px";
+replacePhotoBtn.style.border = "1px solid rgba(255,255,255,0.35)";
+replacePhotoBtn.style.background = "rgba(242,228,186,0.16)";
+replacePhotoBtn.style.color = "#f2e4ba";
+replacePhotoBtn.style.cursor = "pointer";
+photoButtonRow.appendChild(replacePhotoBtn);
+
+const clearPhotoBtn = document.createElement("button");
+clearPhotoBtn.type = "button";
+clearPhotoBtn.textContent = "Hapus Foto";
+clearPhotoBtn.style.padding = "6px 8px";
+clearPhotoBtn.style.borderRadius = "8px";
+clearPhotoBtn.style.border = "1px solid rgba(255,255,255,0.35)";
+clearPhotoBtn.style.background = "rgba(242,228,186,0.16)";
+clearPhotoBtn.style.color = "#f2e4ba";
+clearPhotoBtn.style.cursor = "pointer";
+photoButtonRow.appendChild(clearPhotoBtn);
+
+const uploadStatus = document.createElement("div");
+uploadStatus.style.opacity = "0.9";
+uploadStatus.textContent = "Foto custom: 0";
+uploadPanel.appendChild(uploadStatus);
+
+const titleRow = document.createElement("div");
+titleRow.style.display = "flex";
+titleRow.style.gap = "6px";
+uploadPanel.appendChild(titleRow);
+
+const titleInput = document.createElement("input");
+titleInput.type = "text";
+titleInput.placeholder = "Judul 3D";
+titleInput.maxLength = 40;
+titleInput.style.flex = "1";
+titleInput.style.minWidth = "0";
+titleInput.style.padding = "6px 8px";
+titleInput.style.borderRadius = "8px";
+titleInput.style.border = "1px solid rgba(255,255,255,0.35)";
+titleInput.style.background = "rgba(5, 10, 28, 0.65)";
+titleInput.style.color = "#f2e4ba";
+titleRow.appendChild(titleInput);
+
+const applyTitleBtn = document.createElement("button");
+applyTitleBtn.type = "button";
+applyTitleBtn.textContent = "Set";
+applyTitleBtn.style.padding = "6px 10px";
+applyTitleBtn.style.borderRadius = "8px";
+applyTitleBtn.style.border = "1px solid rgba(255,255,255,0.35)";
+applyTitleBtn.style.background = "rgba(242,228,186,0.16)";
+applyTitleBtn.style.color = "#f2e4ba";
+applyTitleBtn.style.cursor = "pointer";
+titleRow.appendChild(applyTitleBtn);
 
 const photoPicker = document.createElement("input");
 photoPicker.id = "photoPicker";
@@ -69,9 +146,25 @@ photoPicker.type = "file";
 photoPicker.accept = "image/*";
 photoPicker.multiple = true;
 photoPicker.style.display = "none";
+photoPicker.dataset.pickMode = "append";
 document.body.appendChild(photoPicker);
-uploadPanel.addEventListener("click", () => {
+addPhotoBtn.addEventListener("click", () => {
+  photoPicker.dataset.pickMode = "append";
   photoPicker.click();
+});
+replacePhotoBtn.addEventListener("click", () => {
+  photoPicker.dataset.pickMode = "replace";
+  photoPicker.click();
+});
+clearPhotoBtn.addEventListener("click", async () => {
+  userPhotoBlobs = [];
+  syncUrlsFromBlobs();
+  updateCardTextures();
+  try {
+    await clearSavedPhotoBlobs();
+  } catch (error) {
+    console.error("Gagal menghapus foto dari IndexedDB:", error);
+  }
 });
 
 const controls = new OrbitControls(camera, renderer.domElement);
@@ -88,7 +181,7 @@ controls.maxPolarAngle = Math.PI - 0.01;
 controls.target.set(0, 0, -260);
 controls.update();
 
-const autoZoomDuration = 16;
+const autoZoomDuration = 14;
 const autoZoomInDuration = 2;
 const autoZoomHoldDuration = 0;
 const autoZoomStartDist = 330;
@@ -228,11 +321,8 @@ orbitPivot.add(innerWhiteCloud);
 const nearFillCloud = buildRingPoints(3200, 1260, 1760, 1);
 orbitPivot.add(nearFillCloud);
 
-function createTitleMesh(text) {
-  const canvas = document.createElement("canvas");
-  canvas.width = 2048;
-  canvas.height = 512;
-  const ctx = canvas.getContext("2d");
+function drawTitleOnCanvas(ctx, canvas, text) {
+  const safeText = (text || "").trim() || DEFAULT_TITLE_TEXT;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   ctx.font = "700 150px 'Trebuchet MS', sans-serif";
   ctx.textAlign = "center";
@@ -240,7 +330,15 @@ function createTitleMesh(text) {
   ctx.fillStyle = "#f2e4ba";
   ctx.shadowColor = "rgba(242,228,186,0.4)";
   ctx.shadowBlur = 22;
-  ctx.fillText(text, canvas.width / 2, canvas.height / 2);
+  ctx.fillText(safeText, canvas.width / 2, canvas.height / 2);
+}
+
+function createTitleMesh(text) {
+  const canvas = document.createElement("canvas");
+  canvas.width = 2048;
+  canvas.height = 512;
+  const ctx = canvas.getContext("2d");
+  drawTitleOnCanvas(ctx, canvas, text);
   const texture = new THREE.CanvasTexture(canvas);
   texture.needsUpdate = true;
   const material = new THREE.MeshBasicMaterial({
@@ -249,12 +347,36 @@ function createTitleMesh(text) {
     side: THREE.DoubleSide,
     depthWrite: false
   });
-  return new THREE.Mesh(new THREE.PlaneGeometry(430, 108), material);
+  const mesh = new THREE.Mesh(new THREE.PlaneGeometry(430, 108), material);
+  mesh.userData.titleCanvas = canvas;
+  mesh.userData.titleCtx = ctx;
+  return mesh;
 }
 
-const title3D = createTitleMesh("When Yah.");
-title3D.position.set(0, 220, 250);
+const title3D = createTitleMesh(DEFAULT_TITLE_TEXT);
+title3D.position.set(0, 190, 240);
 orbitPivot.add(title3D);
+
+function setTitle3DText(nextTitle, persist = true) {
+  const finalTitle = (nextTitle || "").trim() || DEFAULT_TITLE_TEXT;
+  const titleCanvas = title3D.userData.titleCanvas;
+  const titleCtx = title3D.userData.titleCtx;
+  drawTitleOnCanvas(titleCtx, titleCanvas, finalTitle);
+  title3D.material.map.needsUpdate = true;
+  titleInput.value = finalTitle;
+  if (persist) {
+    localStorage.setItem(TITLE_STORAGE_KEY, finalTitle);
+  }
+}
+
+applyTitleBtn.addEventListener("click", () => {
+  setTitle3DText(titleInput.value, true);
+});
+titleInput.addEventListener("keydown", (event) => {
+  if (event.key === "Enter") {
+    setTitle3DText(titleInput.value, true);
+  }
+});
 
 function buildRedParticleSphere(count, radius) {
   const pos = new Float32Array(count * 3);
@@ -398,14 +520,7 @@ function createRoundedCornerMaskTexture(size = 256, radius = 38) {
 }
 
 // PHOTO_URLS_START (auto-generated by generate_photo_list.py)
-const photoUrls = [
-  "foto/WhatsApp Image 2026-03-06 at 09.27.24.jpeg",
-  "foto/WhatsApp Image 2026-03-06 at 09.27.25 (1).jpeg",
-  "foto/WhatsApp Image 2026-03-06 at 09.27.25 (2).jpeg",
-  "foto/WhatsApp Image 2026-03-06 at 09.27.25.jpeg",
-  "foto/WhatsApp Image 2026-03-06 at 09.51.41 (1).jpeg",
-  "foto/WhatsApp Image 2026-03-06 at 09.51.41.jpeg",
-];
+const photoUrls = [];
 // PHOTO_URLS_END
 
 const textureLoader = new THREE.TextureLoader();
@@ -460,10 +575,23 @@ function savePhotoBlobs(blobs) {
   }));
 }
 
+function clearSavedPhotoBlobs() {
+  return openPhotoDb().then((db) => new Promise((resolve, reject) => {
+    const tx = db.transaction(PHOTO_DB_STORE, "readwrite");
+    const store = tx.objectStore(PHOTO_DB_STORE);
+    store.delete(PHOTO_DB_KEY);
+    tx.oncomplete = () => {
+      db.close();
+      resolve();
+    };
+    tx.onerror = () => reject(tx.error);
+  }));
+}
+
 function updateUploadPanelText() {
-  uploadPanel.textContent = userPhotoBlobs.length > 0
-    ? `Pilih Foto Sendiri (${userPhotoBlobs.length})`
-    : "Pilih Foto Sendiri";
+  uploadStatus.textContent = userPhotoBlobs.length > 0
+    ? `Foto custom: ${userPhotoBlobs.length}`
+    : "Foto custom: 0";
 }
 
 function shuffleArray(arr) {
@@ -562,7 +690,8 @@ photoPicker.addEventListener("change", async (event) => {
   if (files.length === 0) {
     return;
   }
-  userPhotoBlobs = [...userPhotoBlobs, ...files];
+  const pickMode = photoPicker.dataset.pickMode === "replace" ? "replace" : "append";
+  userPhotoBlobs = pickMode === "replace" ? files : [...userPhotoBlobs, ...files];
   syncUrlsFromBlobs();
   updateCardTextures();
   try {
@@ -570,6 +699,7 @@ photoPicker.addEventListener("change", async (event) => {
   } catch (error) {
     console.error("Gagal menyimpan foto ke IndexedDB:", error);
   }
+  photoPicker.dataset.pickMode = "append";
   photoPicker.value = "";
 });
 
@@ -587,6 +717,9 @@ readSavedPhotoBlobs()
     console.error("Gagal memuat foto dari IndexedDB:", error);
     updateUploadPanelText();
   });
+
+const savedTitle = localStorage.getItem(TITLE_STORAGE_KEY);
+setTitle3DText(savedTitle || DEFAULT_TITLE_TEXT, false);
 
 window.addEventListener("beforeunload", () => {
   revokeUserPhotoUrls();
