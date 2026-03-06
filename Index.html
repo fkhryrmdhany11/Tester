@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Only For U</title>
+<style>
+  :root {
+    --bg: #030515;
+    --text: #f2e4ba;
+  }
+  html, body {
+    margin: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: radial-gradient(circle at 50% 35%, #090f38 0%, var(--bg) 58%, #010109 100%);
+    font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+  }
+  canvas {
+    display: block;
+  }
+</style>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.module.js"
+  }
+}
+</script>
+</head>
+<body>
+<script type="module">
+import * as THREE from "three";
+import { OrbitControls } from "https://cdn.jsdelivr.net/npm/three@0.158.0/examples/jsm/controls/OrbitControls.js";
+
+const scene = new THREE.Scene();
+scene.fog = new THREE.FogExp2(0x0b122a, 0.00062);
+
+const camera = new THREE.PerspectiveCamera(58, window.innerWidth / window.innerHeight, 0.1, 4000);
+camera.position.set(0, 115, 430);
+camera.lookAt(0, 0, -260);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.34;
+document.body.appendChild(renderer.domElement);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.05;
+controls.enablePan = false;
+controls.enableZoom = true;
+controls.rotateSpeed = 0.9;
+controls.zoomSpeed = 1.1;
+controls.minDistance = 120;
+controls.maxDistance = 900;
+controls.minPolarAngle = 0.01;
+controls.maxPolarAngle = Math.PI - 0.01;
+controls.target.set(0, 0, -260);
+controls.update();
+
+const autoZoomDuration = 16;
+const autoZoomInDuration = 2;
+const autoZoomHoldDuration = 0;
+const autoZoomStartDist = 330;
+const autoZoomNearDist = 150;
+const autoZoomEndDist = 940;
+const autoZoomDirection = camera.position.clone().sub(controls.target);
+autoZoomDirection.normalize();
+camera.position.copy(controls.target).add(autoZoomDirection.clone().multiplyScalar(autoZoomStartDist));
+controls.update();
+
+const ambient = new THREE.AmbientLight(0xffffff, 0.95);
+scene.add(ambient);
+const hemi = new THREE.HemisphereLight(0xdfe8ff, 0x1a2238, 0.6);
+scene.add(hemi);
+const point = new THREE.PointLight(0xff4a3b, 1.6, 1400);
+point.position.set(0, 180, -520);
+scene.add(point);
+
+function rand(min, max) {
+  return Math.random() * (max - min) + min;
+}
+
+function createRoundParticleTexture() {
+  const canvas = document.createElement("canvas");
+  canvas.width = 64;
+  canvas.height = 64;
+  const ctx = canvas.getContext("2d");
+  const grad = ctx.createRadialGradient(32, 32, 2, 32, 32, 32);
+  grad.addColorStop(0, "rgba(255,255,255,1)");
+  grad.addColorStop(0.55, "rgba(255,255,255,0.95)");
+  grad.addColorStop(1, "rgba(255,255,255,0)");
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, 64, 64);
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.needsUpdate = true;
+  return texture;
+}
+
+const roundParticleMap = createRoundParticleTexture();
+
+function createSoftRedParticleTexture() {
+  const canvas = document.createElement("canvas");
+  canvas.width = 96;
+  canvas.height = 96;
+  const ctx = canvas.getContext("2d");
+  const grad = ctx.createRadialGradient(48, 48, 4, 48, 48, 48);
+  grad.addColorStop(0, "rgba(255,255,255,0.95)");
+  grad.addColorStop(0.35, "rgba(255,255,255,0.72)");
+  grad.addColorStop(0.75, "rgba(255,255,255,0.22)");
+  grad.addColorStop(1, "rgba(255,255,255,0)");
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, 96, 96);
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.needsUpdate = true;
+  return texture;
+}
+
+const softRedParticleMap = createSoftRedParticleTexture();
+
+const skyCount = 3200;
+const skyPos = new Float32Array(skyCount * 3);
+const skyColor = new Float32Array(skyCount * 3);
+for (let i = 0; i < skyCount; i += 1) {
+  const r = rand(680, 2200);
+  const theta = rand(0, Math.PI * 2);
+  const phi = rand(0.2, Math.PI - 0.2);
+  skyPos[i * 3] = r * Math.sin(phi) * Math.cos(theta);
+  skyPos[i * 3 + 1] = r * Math.cos(phi) + 160;
+  skyPos[i * 3 + 2] = r * Math.sin(phi) * Math.sin(theta) - 520;
+  skyColor[i * 3] = 1;
+  skyColor[i * 3 + 1] = 1;
+  skyColor[i * 3 + 2] = 1;
+}
+const skyGeo = new THREE.BufferGeometry();
+skyGeo.setAttribute("position", new THREE.BufferAttribute(skyPos, 3));
+skyGeo.setAttribute("color", new THREE.BufferAttribute(skyColor, 3));
+const sky = new THREE.Points(
+  skyGeo,
+  new THREE.PointsMaterial({
+    size: 2.35,
+    sizeAttenuation: true,
+    map: roundParticleMap,
+    alphaTest: 0.08,
+    vertexColors: true,
+    transparent: false,
+    opacity: 1,
+    depthWrite: false
+  })
+);
+scene.add(sky);
+
+const orbitPivot = new THREE.Group();
+orbitPivot.position.set(0, 0, -260);
+scene.add(orbitPivot);
+
+function buildRingPoints(count, minRadius, maxRadius, opacity) {
+  const pos = new Float32Array(count * 3);
+  const col = new Float32Array(count * 3);
+  for (let i = 0; i < count; i += 1) {
+    const ang = rand(0, Math.PI * 2);
+    const radius = rand(minRadius, maxRadius);
+    pos[i * 3] = Math.cos(ang) * radius;
+    pos[i * 3 + 1] = rand(-2.2, 2.2);
+    pos[i * 3 + 2] = Math.sin(ang) * radius;
+    col[i * 3] = 1;
+    col[i * 3 + 1] = 1;
+    col[i * 3 + 2] = 1;
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+  geo.setAttribute("color", new THREE.BufferAttribute(col, 3));
+  return new THREE.Points(
+    geo,
+    new THREE.PointsMaterial({
+      size: 2.55,
+      sizeAttenuation: true,
+      map: roundParticleMap,
+      alphaTest: 0.08,
+      vertexColors: true,
+      transparent: false,
+      opacity,
+      depthWrite: false
+    })
+  );
+}
+
+const whiteRingDense = buildRingPoints(17000, 140, 560, 1);
+const whiteRingMid = buildRingPoints(9000, 500, 980, 1);
+const whiteRingSparse = buildRingPoints(5500, 900, 1320, 1);
+orbitPivot.add(whiteRingDense);
+orbitPivot.add(whiteRingMid);
+orbitPivot.add(whiteRingSparse);
+
+const innerWhiteCloud = buildRingPoints(5200, 110, 240, 1);
+orbitPivot.add(innerWhiteCloud);
+
+const nearFillCloud = buildRingPoints(3200, 1260, 1760, 1);
+orbitPivot.add(nearFillCloud);
+
+function createTitleMesh(text) {
+  const canvas = document.createElement("canvas");
+  canvas.width = 2048;
+  canvas.height = 512;
+  const ctx = canvas.getContext("2d");
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.font = "700 150px 'Trebuchet MS', sans-serif";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillStyle = "#f2e4ba";
+  ctx.shadowColor = "rgba(242,228,186,0.4)";
+  ctx.shadowBlur = 22;
+  ctx.fillText(text, canvas.width / 2, canvas.height / 2);
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.needsUpdate = true;
+  const material = new THREE.MeshBasicMaterial({
+    map: texture,
+    transparent: true,
+    side: THREE.DoubleSide,
+    depthWrite: false
+  });
+  return new THREE.Mesh(new THREE.PlaneGeometry(430, 108), material);
+}
+
+const title3D = createTitleMesh("When Yah.");
+title3D.position.set(0, 220, 250);
+orbitPivot.add(title3D);
+
+function buildRedParticleSphere(count, radius) {
+  const pos = new Float32Array(count * 3);
+  const col = new Float32Array(count * 3);
+  const dir = new Float32Array(count * 3);
+  const phase = new Float32Array(count);
+  const amp = new Float32Array(count);
+  const shake = new Float32Array(count);
+  const floatAmp = new Float32Array(count);
+  const innerRadius = radius * 0.64;
+  const shellThickness = radius - innerRadius;
+  for (let i = 0; i < count; i += 1) {
+    const theta = rand(0, Math.PI * 2);
+    const phi = Math.acos(rand(-1, 1));
+    // Bias to outer skin for thicker outer shell.
+    const r = radius - (Math.pow(Math.random(), 4.2) * shellThickness);
+    const x = r * Math.sin(phi) * Math.cos(theta);
+    const y = r * Math.cos(phi);
+    const z = r * Math.sin(phi) * Math.sin(theta);
+    pos[i * 3] = x;
+    pos[i * 3 + 1] = y;
+    pos[i * 3 + 2] = z;
+    const invLen = 1 / Math.max(Math.hypot(x, y, z), 0.0001);
+    dir[i * 3] = x * invLen;
+    dir[i * 3 + 1] = y * invLen;
+    dir[i * 3 + 2] = z * invLen;
+    phase[i] = rand(0, Math.PI * 2);
+    amp[i] = rand(0.8, 2.6);
+    shake[i] = rand(0.12, 0.45);
+    floatAmp[i] = rand(0.25, 0.8);
+    col[i * 3] = 1;
+    col[i * 3 + 1] = rand(0.01, 0.07);
+    col[i * 3 + 2] = rand(0.01, 0.06);
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+  geo.setAttribute("color", new THREE.BufferAttribute(col, 3));
+  const points = new THREE.Points(
+    geo,
+    new THREE.PointsMaterial({
+      size: 4.5,
+      sizeAttenuation: true,
+      vertexColors: true,
+      map: softRedParticleMap,
+      alphaTest: 0.01,
+      transparent: true,
+      opacity: 1,
+      depthWrite: false
+    })
+  );
+  points.userData.basePos = new Float32Array(pos);
+  points.userData.dir = dir;
+  points.userData.phase = phase;
+  points.userData.amp = amp;
+  points.userData.shake = shake;
+  points.userData.floatAmp = floatAmp;
+  return points;
+}
+
+const redParticleSphere = buildRedParticleSphere(13000, 168);
+redParticleSphere.position.set(0, 0, 0);
+orbitPivot.add(redParticleSphere);
+
+function buildInnerWhitePlane(count, minRadius, maxRadius) {
+  const pos = new Float32Array(count * 3);
+  for (let i = 0; i < count; i += 1) {
+    const a = rand(0, Math.PI * 2);
+    const r = rand(minRadius, maxRadius);
+    pos[i * 3] = Math.cos(a) * r;
+    pos[i * 3 + 1] = rand(-1.2, 1.2);
+    pos[i * 3 + 2] = Math.sin(a) * r;
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+  return new THREE.Points(
+    geo,
+    new THREE.PointsMaterial({
+      color: 0xffffff,
+      size: 2.15,
+      sizeAttenuation: true,
+      map: roundParticleMap,
+      alphaTest: 0.08,
+      transparent: false,
+      opacity: 1,
+      depthWrite: false
+    })
+  );
+}
+
+const innerWhitePlane = buildInnerWhitePlane(1800, 26, 110);
+innerWhitePlane.position.set(0, 0, 0);
+orbitPivot.add(innerWhitePlane);
+
+function makePhotoTexture(seed) {
+  const canvas = document.createElement("canvas");
+  canvas.width = 128;
+  canvas.height = 128;
+  const ctx = canvas.getContext("2d");
+  const hue = (seed * 43) % 360;
+  const grad = ctx.createLinearGradient(0, 0, 128, 128);
+  grad.addColorStop(0, `hsl(${hue}deg 85% 72%)`);
+  grad.addColorStop(1, `hsl(${(hue + 110) % 360}deg 70% 52%)`);
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, 128, 128);
+  ctx.fillStyle = "rgba(255,255,255,0.82)";
+  ctx.beginPath();
+  ctx.arc(64, 50, 24, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "rgba(245,245,245,0.78)";
+  ctx.fillRect(32, 78, 64, 36);
+  ctx.strokeStyle = "rgba(255,255,255,0.95)";
+  ctx.lineWidth = 6;
+  ctx.strokeRect(3, 3, 122, 122);
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.anisotropy = 4;
+  return tex;
+}
+
+const cardGroup = new THREE.Group();
+orbitPivot.add(cardGroup);
+const cardCount = 105;
+const goldenAngle = Math.PI * (3 - Math.sqrt(5));
+for (let i = 0; i < cardCount; i += 1) {
+  const w = rand(16, 28);
+  const h = w;
+  const tex = makePhotoTexture(i + 1);
+  const mat = new THREE.MeshStandardMaterial({
+    map: tex,
+    emissive: 0x202020,
+    roughness: 0.42,
+    metalness: 0.04
+  });
+  const plane = new THREE.Mesh(new THREE.PlaneGeometry(w, h), mat);
+  const tNorm = (i + 0.5) / cardCount;
+  const bandSplit = 0.72;
+  const baseRadius = tNorm < bandSplit
+    ? 255 + ((tNorm / bandSplit) * (560 - 255))
+    : 560 + (((tNorm - bandSplit) / (1 - bandSplit)) * (760 - 560));
+  const ang = (i * goldenAngle) + rand(-0.12, 0.12);
+  const radius = baseRadius + rand(-16, 16);
+  plane.position.set(Math.cos(ang) * radius, rand(12, 38), Math.sin(ang) * radius);
+  plane.rotation.y = rand(-0.24, 0.24);
+  plane.rotation.x = rand(-0.06, 0.06);
+  plane.userData.angle = ang;
+  plane.userData.radius = radius;
+  plane.userData.speed = rand(0.00035, 0.0009);
+  plane.userData.baseY = plane.position.y;
+  plane.userData.floatOffset = rand(0, Math.PI * 2);
+  cardGroup.add(plane);
+}
+
+const clock = new THREE.Clock();
+function animate() {
+  const t = clock.getElapsedTime();
+  requestAnimationFrame(animate);
+
+  const autoZoomActive = t < autoZoomDuration;
+  controls.enabled = !autoZoomActive;
+
+  if (autoZoomActive) {
+    let dist = autoZoomStartDist;
+    if (t < autoZoomInDuration) {
+      const pIn = t / autoZoomInDuration;
+      dist = autoZoomStartDist + ((autoZoomNearDist - autoZoomStartDist) * pIn);
+    } else {
+      const outDuration = autoZoomDuration - autoZoomInDuration - autoZoomHoldDuration;
+      const pOut = (t - autoZoomInDuration - autoZoomHoldDuration) / outDuration;
+      dist = autoZoomNearDist + ((autoZoomEndDist - autoZoomNearDist) * pOut);
+    }
+    camera.position.copy(controls.target).add(autoZoomDirection.clone().multiplyScalar(dist));
+  }
+
+  sky.rotation.y += 0.00015;
+  innerWhiteCloud.rotation.y -= 0.00042;
+  whiteRingDense.rotation.y -= 0.00055;
+  whiteRingMid.rotation.y -= 0.00042;
+  whiteRingSparse.rotation.y -= 0.0003;
+  nearFillCloud.rotation.y -= 0.00018;
+  const redPos = redParticleSphere.geometry.attributes.position;
+  const redArr = redPos.array;
+  const redBase = redParticleSphere.userData.basePos;
+  const redDir = redParticleSphere.userData.dir;
+  const redPhase = redParticleSphere.userData.phase;
+  const redAmp = redParticleSphere.userData.amp;
+  const redShake = redParticleSphere.userData.shake;
+  const redFloatAmp = redParticleSphere.userData.floatAmp;
+  for (let i = 0; i < redPhase.length; i += 1) {
+    const i3 = i * 3;
+    const wobbleA = Math.sin((t * 5.1) + redPhase[i]) * redAmp[i];
+    const wobbleB = Math.sin((t * 8.4) + (redPhase[i] * 1.7)) * (redAmp[i] * 0.3);
+    const wobble = wobbleA + wobbleB;
+    const shakeX = Math.sin((t * 19.5) + (redPhase[i] * 4.3)) * redShake[i];
+    const shakeY = Math.cos((t * 22.2) + (redPhase[i] * 3.1)) * redShake[i];
+    const shakeZ = Math.sin((t * 17.8) + (redPhase[i] * 5.6)) * redShake[i];
+    const floatY = Math.sin((t * 1.6) + (redPhase[i] * 0.9)) * redFloatAmp[i];
+    redArr[i3] = redBase[i3] + (redDir[i3] * wobble) + shakeX;
+    redArr[i3 + 1] = redBase[i3 + 1] + (redDir[i3 + 1] * wobble) + shakeY + floatY;
+    redArr[i3 + 2] = redBase[i3 + 2] + (redDir[i3 + 2] * wobble) + shakeZ;
+  }
+  redPos.needsUpdate = true;
+  redParticleSphere.position.y = Math.sin(t * 0.85) * 2.2;
+
+  for (let i = 0; i < cardGroup.children.length; i += 1) {
+    const card = cardGroup.children[i];
+    card.userData.angle -= card.userData.speed;
+    card.position.x = Math.cos(card.userData.angle) * card.userData.radius;
+    card.position.z = Math.sin(card.userData.angle) * card.userData.radius;
+    card.position.y = card.userData.baseY + Math.sin(t * 0.8 + card.userData.floatOffset) * 1.5;
+    card.lookAt(camera.position);
+  }
+
+  if (controls.enabled) {
+    controls.update();
+  }
+  renderer.render(scene, camera);
+}
+animate();
+
+window.addEventListener("resize", () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+</script>
+</body>
+</html>
