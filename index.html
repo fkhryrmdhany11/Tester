@@ -414,6 +414,57 @@ const roundedCardMask = createRoundedCornerMaskTexture();
 orbitPivot.add(cardGroup);
 const cardCount = 50;
 let userPhotoUrls = [];
+let userPhotoBlobs = [];
+const PHOTO_DB_NAME = "whenyah-photo-db";
+const PHOTO_DB_STORE = "kv";
+const PHOTO_DB_KEY = "selectedPhotos";
+
+function openPhotoDb() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(PHOTO_DB_NAME, 1);
+    request.onupgradeneeded = () => {
+      const db = request.result;
+      if (!db.objectStoreNames.contains(PHOTO_DB_STORE)) {
+        db.createObjectStore(PHOTO_DB_STORE);
+      }
+    };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+
+function readSavedPhotoBlobs() {
+  return openPhotoDb().then((db) => new Promise((resolve, reject) => {
+    const tx = db.transaction(PHOTO_DB_STORE, "readonly");
+    const store = tx.objectStore(PHOTO_DB_STORE);
+    const request = store.get(PHOTO_DB_KEY);
+    request.onsuccess = () => {
+      const value = request.result;
+      resolve(Array.isArray(value) ? value : []);
+    };
+    request.onerror = () => reject(request.error);
+    tx.oncomplete = () => db.close();
+  }));
+}
+
+function savePhotoBlobs(blobs) {
+  return openPhotoDb().then((db) => new Promise((resolve, reject) => {
+    const tx = db.transaction(PHOTO_DB_STORE, "readwrite");
+    const store = tx.objectStore(PHOTO_DB_STORE);
+    store.put(blobs, PHOTO_DB_KEY);
+    tx.oncomplete = () => {
+      db.close();
+      resolve();
+    };
+    tx.onerror = () => reject(tx.error);
+  }));
+}
+
+function updateUploadPanelText() {
+  uploadPanel.textContent = userPhotoBlobs.length > 0
+    ? `Pilih Foto Sendiri (${userPhotoBlobs.length})`
+    : "Pilih Foto Sendiri";
+}
 
 function shuffleArray(arr) {
   for (let i = arr.length - 1; i > 0; i -= 1) {
@@ -487,6 +538,12 @@ function revokeUserPhotoUrls() {
   }
 }
 
+function syncUrlsFromBlobs() {
+  revokeUserPhotoUrls();
+  userPhotoUrls = userPhotoBlobs.map((blob) => URL.createObjectURL(blob));
+  updateUploadPanelText();
+}
+
 function updateCardTextures() {
   for (let i = 0; i < cardGroup.children.length; i += 1) {
     const card = cardGroup.children[i];
@@ -500,16 +557,36 @@ function updateCardTextures() {
   }
 }
 
-photoPicker.addEventListener("change", (event) => {
+photoPicker.addEventListener("change", async (event) => {
   const files = Array.from(event.target.files || []).filter((file) => file.type.startsWith("image/"));
   if (files.length === 0) {
     return;
   }
-  const newUrls = files.map((file) => URL.createObjectURL(file));
-  userPhotoUrls = [...userPhotoUrls, ...newUrls];
+  userPhotoBlobs = [...userPhotoBlobs, ...files];
+  syncUrlsFromBlobs();
   updateCardTextures();
+  try {
+    await savePhotoBlobs(userPhotoBlobs);
+  } catch (error) {
+    console.error("Gagal menyimpan foto ke IndexedDB:", error);
+  }
   photoPicker.value = "";
 });
+
+readSavedPhotoBlobs()
+  .then((savedBlobs) => {
+    if (savedBlobs.length > 0) {
+      userPhotoBlobs = savedBlobs;
+      syncUrlsFromBlobs();
+      updateCardTextures();
+    } else {
+      updateUploadPanelText();
+    }
+  })
+  .catch((error) => {
+    console.error("Gagal memuat foto dari IndexedDB:", error);
+    updateUploadPanelText();
+  });
 
 window.addEventListener("beforeunload", () => {
   revokeUserPhotoUrls();
