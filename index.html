@@ -64,14 +64,17 @@ document.body.appendChild(controlDock);
 
 const togglePanelBtn = document.createElement("button");
 togglePanelBtn.type = "button";
-togglePanelBtn.style.padding = "8px 10px";
-togglePanelBtn.style.borderRadius = "10px";
+togglePanelBtn.style.width = "34px";
+togglePanelBtn.style.height = "34px";
+togglePanelBtn.style.padding = "0";
+togglePanelBtn.style.borderRadius = "9px";
 togglePanelBtn.style.border = "1px solid rgba(255,255,255,0.35)";
 togglePanelBtn.style.background = "rgba(7, 12, 35, 0.82)";
 togglePanelBtn.style.color = "#f2e4ba";
-togglePanelBtn.style.font = "700 12px 'Trebuchet MS', sans-serif";
+togglePanelBtn.style.font = "700 13px 'Trebuchet MS', sans-serif";
+togglePanelBtn.style.lineHeight = "1";
 togglePanelBtn.style.cursor = "pointer";
-togglePanelBtn.textContent = "Laci";
+togglePanelBtn.textContent = "≡";
 controlDock.appendChild(togglePanelBtn);
 
 const uploadPanel = document.createElement("div");
@@ -96,7 +99,8 @@ function setPanelOpen(isOpen) {
     : (isMobileLayout ? "translateY(-14px) scale(0.98)" : "translateX(-24px) scale(0.96)");
   uploadPanel.style.opacity = isOpen ? "1" : "0";
   uploadPanel.style.pointerEvents = isOpen ? "auto" : "none";
-  togglePanelBtn.textContent = isOpen ? "Tutup" : "Buka";
+  togglePanelBtn.textContent = isOpen ? "×" : "≡";
+  togglePanelBtn.title = isOpen ? "Tutup panel" : "Buka panel";
   localStorage.setItem(PANEL_OPEN_KEY, isOpen ? "1" : "0");
 }
 
@@ -203,8 +207,10 @@ function applyResponsiveLayout() {
     controlDock.style.right = "10px";
     controlDock.style.gap = "5px";
     controlDock.style.alignItems = "flex-start";
-    togglePanelBtn.style.padding = "7px 9px";
-    togglePanelBtn.style.font = "700 11px 'Trebuchet MS', sans-serif";
+    togglePanelBtn.style.width = "30px";
+    togglePanelBtn.style.height = "30px";
+    togglePanelBtn.style.borderRadius = "8px";
+    togglePanelBtn.style.font = "700 12px 'Trebuchet MS', sans-serif";
     uploadPanel.style.minWidth = "0";
     uploadPanel.style.width = "min(72vw, 280px)";
     uploadPanel.style.padding = "7px";
@@ -237,8 +243,10 @@ function applyResponsiveLayout() {
     controlDock.style.right = "";
     controlDock.style.gap = "8px";
     controlDock.style.alignItems = "flex-start";
-    togglePanelBtn.style.padding = "8px 10px";
-    togglePanelBtn.style.font = "700 12px 'Trebuchet MS', sans-serif";
+    togglePanelBtn.style.width = "34px";
+    togglePanelBtn.style.height = "34px";
+    togglePanelBtn.style.borderRadius = "9px";
+    togglePanelBtn.style.font = "700 13px 'Trebuchet MS', sans-serif";
     uploadPanel.style.minWidth = "220px";
     uploadPanel.style.width = "";
     uploadPanel.style.padding = "10px";
@@ -319,10 +327,19 @@ const autoZoomStartDist = 330;
 const autoZoomNearDist = 150;
 const autoZoomEndDist = 940;
 let autoZoomStartedAt = 0;
+let autoZoomCancelled = false;
 const autoZoomDirection = camera.position.clone().sub(controls.target);
 autoZoomDirection.normalize();
 camera.position.copy(controls.target).add(autoZoomDirection.clone().multiplyScalar(autoZoomStartDist));
 controls.update();
+
+function cancelAutoZoom() {
+  autoZoomCancelled = true;
+}
+
+renderer.domElement.addEventListener("pointerdown", cancelAutoZoom, { passive: true });
+renderer.domElement.addEventListener("touchstart", cancelAutoZoom, { passive: true });
+renderer.domElement.addEventListener("wheel", cancelAutoZoom, { passive: true });
 
 const ambient = new THREE.AmbientLight(0xffffff, 0.95);
 scene.add(ambient);
@@ -861,6 +878,7 @@ const clock = new THREE.Clock();
 
 function restartAutoZoomCycle() {
   autoZoomStartedAt = clock.getElapsedTime();
+  autoZoomCancelled = false;
   camera.position.copy(controls.target).add(autoZoomDirection.clone().multiplyScalar(autoZoomStartDist));
   controls.update();
 }
@@ -874,7 +892,7 @@ function animate() {
   requestAnimationFrame(animate);
 
   const zoomElapsed = t - autoZoomStartedAt;
-  const autoZoomActive = zoomElapsed >= 0 && zoomElapsed < autoZoomDuration;
+  const autoZoomActive = !autoZoomCancelled && zoomElapsed >= 0 && zoomElapsed < autoZoomDuration;
   controls.enabled = !autoZoomActive;
 
   if (autoZoomActive) {
