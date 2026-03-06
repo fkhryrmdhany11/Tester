@@ -506,9 +506,10 @@ photoPicker.addEventListener("change", (event) => {
   if (files.length === 0) {
     return;
   }
-  revokeUserPhotoUrls();
-  userPhotoUrls = files.map((file) => URL.createObjectURL(file));
+  const newUrls = files.map((file) => URL.createObjectURL(file));
+  userPhotoUrls = [...userPhotoUrls, ...newUrls];
   updateCardTextures();
+  photoPicker.value = "";
 });
 
 window.addEventListener("beforeunload", () => {
