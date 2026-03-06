@@ -51,11 +51,30 @@ renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.34;
 document.body.appendChild(renderer.domElement);
 
+const PANEL_OPEN_KEY = "whenyah-panel-open";
+const controlDock = document.createElement("div");
+controlDock.style.position = "fixed";
+controlDock.style.top = "14px";
+controlDock.style.left = "14px";
+controlDock.style.zIndex = "30";
+controlDock.style.display = "flex";
+controlDock.style.alignItems = "flex-start";
+controlDock.style.gap = "8px";
+document.body.appendChild(controlDock);
+
+const togglePanelBtn = document.createElement("button");
+togglePanelBtn.type = "button";
+togglePanelBtn.style.padding = "8px 10px";
+togglePanelBtn.style.borderRadius = "10px";
+togglePanelBtn.style.border = "1px solid rgba(255,255,255,0.35)";
+togglePanelBtn.style.background = "rgba(7, 12, 35, 0.82)";
+togglePanelBtn.style.color = "#f2e4ba";
+togglePanelBtn.style.font = "700 12px 'Trebuchet MS', sans-serif";
+togglePanelBtn.style.cursor = "pointer";
+togglePanelBtn.textContent = "Laci";
+controlDock.appendChild(togglePanelBtn);
+
 const uploadPanel = document.createElement("div");
-uploadPanel.style.position = "fixed";
-uploadPanel.style.top = "14px";
-uploadPanel.style.left = "14px";
-uploadPanel.style.zIndex = "30";
 uploadPanel.style.padding = "10px";
 uploadPanel.style.borderRadius = "10px";
 uploadPanel.style.background = "rgba(7, 12, 35, 0.72)";
@@ -66,7 +85,27 @@ uploadPanel.style.display = "flex";
 uploadPanel.style.flexDirection = "column";
 uploadPanel.style.gap = "8px";
 uploadPanel.style.minWidth = "220px";
-document.body.appendChild(uploadPanel);
+uploadPanel.style.transition = "transform 220ms ease, opacity 220ms ease";
+uploadPanel.style.transformOrigin = "left top";
+controlDock.appendChild(uploadPanel);
+
+function setPanelOpen(isOpen) {
+  const isMobileLayout = window.matchMedia("(max-width: 768px)").matches;
+  uploadPanel.style.transform = isOpen
+    ? "translateX(0)"
+    : (isMobileLayout ? "translateY(-14px) scale(0.98)" : "translateX(-24px) scale(0.96)");
+  uploadPanel.style.opacity = isOpen ? "1" : "0";
+  uploadPanel.style.pointerEvents = isOpen ? "auto" : "none";
+  togglePanelBtn.textContent = isOpen ? "Tutup" : "Buka";
+  localStorage.setItem(PANEL_OPEN_KEY, isOpen ? "1" : "0");
+}
+
+togglePanelBtn.addEventListener("click", () => {
+  const currentlyOpen = uploadPanel.style.pointerEvents !== "none";
+  setPanelOpen(!currentlyOpen);
+});
+
+const initialPanelOpen = localStorage.getItem(PANEL_OPEN_KEY) !== "0";
 
 const photoButtonRow = document.createElement("div");
 photoButtonRow.style.display = "flex";
@@ -140,6 +179,70 @@ applyTitleBtn.style.color = "#f2e4ba";
 applyTitleBtn.style.cursor = "pointer";
 titleRow.appendChild(applyTitleBtn);
 
+const zoomRow = document.createElement("div");
+zoomRow.style.display = "flex";
+zoomRow.style.gap = "6px";
+uploadPanel.appendChild(zoomRow);
+
+const repeatZoomBtn = document.createElement("button");
+repeatZoomBtn.type = "button";
+repeatZoomBtn.textContent = "Ulang Zoom";
+repeatZoomBtn.style.padding = "6px 8px";
+repeatZoomBtn.style.borderRadius = "8px";
+repeatZoomBtn.style.border = "1px solid rgba(255,255,255,0.35)";
+repeatZoomBtn.style.background = "rgba(242,228,186,0.16)";
+repeatZoomBtn.style.color = "#f2e4ba";
+repeatZoomBtn.style.cursor = "pointer";
+zoomRow.appendChild(repeatZoomBtn);
+
+function applyResponsiveLayout() {
+  const isMobileLayout = window.matchMedia("(max-width: 768px)").matches;
+  if (isMobileLayout) {
+    controlDock.style.top = "10px";
+    controlDock.style.left = "10px";
+    controlDock.style.right = "10px";
+    controlDock.style.gap = "6px";
+    controlDock.style.alignItems = "stretch";
+    togglePanelBtn.style.padding = "10px 12px";
+    togglePanelBtn.style.font = "700 13px 'Trebuchet MS', sans-serif";
+    uploadPanel.style.minWidth = "0";
+    uploadPanel.style.width = "min(86vw, 360px)";
+    uploadPanel.style.padding = "10px";
+    uploadPanel.style.gap = "10px";
+    uploadPanel.style.transformOrigin = "top left";
+    photoButtonRow.style.flexWrap = "wrap";
+    photoButtonRow.style.gap = "5px";
+    titleRow.style.flexDirection = "column";
+    zoomRow.style.flexDirection = "column";
+    titleInput.style.width = "100%";
+    applyTitleBtn.style.width = "100%";
+    repeatZoomBtn.style.width = "100%";
+  } else {
+    controlDock.style.top = "14px";
+    controlDock.style.left = "14px";
+    controlDock.style.right = "";
+    controlDock.style.gap = "8px";
+    controlDock.style.alignItems = "flex-start";
+    togglePanelBtn.style.padding = "8px 10px";
+    togglePanelBtn.style.font = "700 12px 'Trebuchet MS', sans-serif";
+    uploadPanel.style.minWidth = "220px";
+    uploadPanel.style.width = "";
+    uploadPanel.style.padding = "10px";
+    uploadPanel.style.gap = "8px";
+    uploadPanel.style.transformOrigin = "left top";
+    photoButtonRow.style.flexWrap = "nowrap";
+    photoButtonRow.style.gap = "6px";
+    titleRow.style.flexDirection = "row";
+    zoomRow.style.flexDirection = "row";
+    titleInput.style.width = "";
+    applyTitleBtn.style.width = "";
+    repeatZoomBtn.style.width = "";
+  }
+}
+
+applyResponsiveLayout();
+setPanelOpen(initialPanelOpen);
+
 const photoPicker = document.createElement("input");
 photoPicker.id = "photoPicker";
 photoPicker.type = "file";
@@ -187,6 +290,7 @@ const autoZoomHoldDuration = 0;
 const autoZoomStartDist = 330;
 const autoZoomNearDist = 150;
 const autoZoomEndDist = 940;
+let autoZoomStartedAt = 0;
 const autoZoomDirection = camera.position.clone().sub(controls.target);
 autoZoomDirection.normalize();
 camera.position.copy(controls.target).add(autoZoomDirection.clone().multiplyScalar(autoZoomStartDist));
@@ -354,7 +458,7 @@ function createTitleMesh(text) {
 }
 
 const title3D = createTitleMesh(DEFAULT_TITLE_TEXT);
-title3D.position.set(0, 190, 240);
+title3D.position.set(0, 190, 330);
 orbitPivot.add(title3D);
 
 function setTitle3DText(nextTitle, persist = true) {
@@ -726,21 +830,33 @@ window.addEventListener("beforeunload", () => {
 });
 
 const clock = new THREE.Clock();
+
+function restartAutoZoomCycle() {
+  autoZoomStartedAt = clock.getElapsedTime();
+  camera.position.copy(controls.target).add(autoZoomDirection.clone().multiplyScalar(autoZoomStartDist));
+  controls.update();
+}
+
+repeatZoomBtn.addEventListener("click", () => {
+  restartAutoZoomCycle();
+});
+
 function animate() {
   const t = clock.getElapsedTime();
   requestAnimationFrame(animate);
 
-  const autoZoomActive = t < autoZoomDuration;
+  const zoomElapsed = t - autoZoomStartedAt;
+  const autoZoomActive = zoomElapsed >= 0 && zoomElapsed < autoZoomDuration;
   controls.enabled = !autoZoomActive;
 
   if (autoZoomActive) {
     let dist = autoZoomStartDist;
-    if (t < autoZoomInDuration) {
-      const pIn = t / autoZoomInDuration;
+    if (zoomElapsed < autoZoomInDuration) {
+      const pIn = zoomElapsed / autoZoomInDuration;
       dist = autoZoomStartDist + ((autoZoomNearDist - autoZoomStartDist) * pIn);
     } else {
       const outDuration = autoZoomDuration - autoZoomInDuration - autoZoomHoldDuration;
-      const pOut = (t - autoZoomInDuration - autoZoomHoldDuration) / outDuration;
+      const pOut = (zoomElapsed - autoZoomInDuration - autoZoomHoldDuration) / outDuration;
       dist = autoZoomNearDist + ((autoZoomEndDist - autoZoomNearDist) * pOut);
     }
     camera.position.copy(controls.target).add(autoZoomDirection.clone().multiplyScalar(dist));
@@ -793,6 +909,9 @@ function animate() {
 animate();
 
 window.addEventListener("resize", () => {
+  applyResponsiveLayout();
+  const currentlyOpen = uploadPanel.style.pointerEvents !== "none";
+  setPanelOpen(currentlyOpen);
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
