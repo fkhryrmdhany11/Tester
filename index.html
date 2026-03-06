@@ -1022,12 +1022,41 @@ function getSupportedMimeType() {
   return "video/webm";
 }
 
-function beginRecordResolution1080p() {
+function makeEvenSize(value) {
+  const rounded = Math.max(2, Math.round(value));
+  return rounded % 2 === 0 ? rounded : rounded - 1;
+}
+
+function getRecordTargetSize() {
+  const isMobileLayout = window.matchMedia("(max-width: 768px)").matches;
+  const viewW = Math.max(window.innerWidth, 1);
+  const viewH = Math.max(window.innerHeight, 1);
+  const aspect = viewW / viewH;
+
+  if (isMobileLayout) {
+    const targetLongEdge = 1920;
+    if (viewH >= viewW) {
+      const h = targetLongEdge;
+      const w = h * aspect;
+      return { width: makeEvenSize(w), height: makeEvenSize(h), isMobileLayout };
+    }
+    const w = targetLongEdge;
+    const h = w / aspect;
+    return { width: makeEvenSize(w), height: makeEvenSize(h), isMobileLayout };
+  }
+
+  const targetWidth = 1920;
+  const targetHeight = targetWidth / aspect;
+  return { width: makeEvenSize(targetWidth), height: makeEvenSize(targetHeight), isMobileLayout };
+}
+
+function beginRecordResolution() {
   preRecordPixelRatio = renderer.getPixelRatio();
   renderer.getSize(preRecordSize);
+  const { width, height } = getRecordTargetSize();
   renderer.setPixelRatio(1);
-  renderer.setSize(1920, 1080, false);
-  camera.aspect = 1920 / 1080;
+  renderer.setSize(width, height, false);
+  camera.aspect = width / height;
   camera.updateProjectionMatrix();
 }
 
@@ -1044,12 +1073,14 @@ function startZoomRecording() {
   btnDownload.disabled = true;
   recordChunks = [];
   restartZoom();
-  beginRecordResolution1080p();
+  const recordTarget = getRecordTargetSize();
+  beginRecordResolution();
 
   recordStream = renderer.domElement.captureStream(120);
+  const videoBitsPerSecond = recordTarget.isMobileLayout ? 30000000 : 90000000;
   mediaRecorder = new MediaRecorder(recordStream, {
     mimeType: getSupportedMimeType(),
-    videoBitsPerSecond: 90000000
+    videoBitsPerSecond
   });
 
   mediaRecorder.ondataavailable = (e) => {
