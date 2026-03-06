@@ -24,7 +24,7 @@
     position: fixed;
     right: 10px;
     top: 10px;
-    z-index: 20;
+    z-index: 9999;
     display: flex;
     flex-direction: column;
     gap: 4px;
@@ -36,6 +36,10 @@
     backdrop-filter: blur(4px);
     min-width: 74px;
     max-width: 86px;
+    touch-action: manipulation;
+    pointer-events: auto;
+    -webkit-user-select: none;
+    user-select: none;
   }
   .zoom-tools button {
     font: 600 9px/1.1 "Trebuchet MS", "Segoe UI", sans-serif;
@@ -82,6 +86,28 @@
   }
   .zoom-toggle svg {
     display: block;
+  }
+
+  @media (max-width: 768px) {
+    .zoom-tools {
+      min-width: 96px;
+      max-width: 112px;
+      right: 8px;
+      top: 8px;
+      padding: 6px;
+    }
+    .zoom-tools button {
+      min-height: 30px;
+      font-size: 10px;
+    }
+    .zoom-toggle {
+      min-width: 34px;
+      min-height: 34px;
+    }
+    .zoom-toggle svg {
+      width: 16px;
+      height: 16px;
+    }
   }
 </style>
 <script type="importmap">
@@ -1062,6 +1088,13 @@ function stopZoomRecording() {
   mediaRecorder.stop();
 }
 
+const blockControlTouchEvents = (event) => {
+  event.stopPropagation();
+};
+["pointerdown", "touchstart", "mousedown", "click"].forEach((evt) => {
+  zoomTools?.addEventListener(evt, blockControlTouchEvents);
+});
+
 btnToggle?.addEventListener("click", () => {
   const opened = zoomTools.classList.toggle("open");
   btnToggle.title = opened ? "Close Controls" : "Open Controls";
@@ -1183,3 +1216,5 @@ window.addEventListener("resize", () => {
 </script>
 </body>
 </html>
+
+
