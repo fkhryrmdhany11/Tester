@@ -201,22 +201,36 @@ function applyResponsiveLayout() {
     controlDock.style.top = "10px";
     controlDock.style.left = "10px";
     controlDock.style.right = "10px";
-    controlDock.style.gap = "6px";
-    controlDock.style.alignItems = "stretch";
-    togglePanelBtn.style.padding = "10px 12px";
-    togglePanelBtn.style.font = "700 13px 'Trebuchet MS', sans-serif";
+    controlDock.style.gap = "5px";
+    controlDock.style.alignItems = "flex-start";
+    togglePanelBtn.style.padding = "7px 9px";
+    togglePanelBtn.style.font = "700 11px 'Trebuchet MS', sans-serif";
     uploadPanel.style.minWidth = "0";
-    uploadPanel.style.width = "min(86vw, 360px)";
-    uploadPanel.style.padding = "10px";
-    uploadPanel.style.gap = "10px";
+    uploadPanel.style.width = "min(72vw, 280px)";
+    uploadPanel.style.padding = "7px";
+    uploadPanel.style.gap = "6px";
+    uploadPanel.style.font = "600 11px 'Trebuchet MS', sans-serif";
     uploadPanel.style.transformOrigin = "top left";
     photoButtonRow.style.flexWrap = "wrap";
-    photoButtonRow.style.gap = "5px";
+    photoButtonRow.style.gap = "4px";
     titleRow.style.flexDirection = "column";
     zoomRow.style.flexDirection = "column";
     titleInput.style.width = "100%";
+    titleInput.style.fontSize = "11px";
+    titleInput.style.padding = "5px 7px";
     applyTitleBtn.style.width = "100%";
+    applyTitleBtn.style.padding = "5px 7px";
+    applyTitleBtn.style.fontSize = "11px";
     repeatZoomBtn.style.width = "100%";
+    repeatZoomBtn.style.padding = "5px 7px";
+    repeatZoomBtn.style.fontSize = "11px";
+    addPhotoBtn.style.padding = "5px 7px";
+    addPhotoBtn.style.fontSize = "11px";
+    replacePhotoBtn.style.padding = "5px 7px";
+    replacePhotoBtn.style.fontSize = "11px";
+    clearPhotoBtn.style.padding = "5px 7px";
+    clearPhotoBtn.style.fontSize = "11px";
+    uploadStatus.style.fontSize = "11px";
   } else {
     controlDock.style.top = "14px";
     controlDock.style.left = "14px";
@@ -229,14 +243,28 @@ function applyResponsiveLayout() {
     uploadPanel.style.width = "";
     uploadPanel.style.padding = "10px";
     uploadPanel.style.gap = "8px";
+    uploadPanel.style.font = "600 12px 'Trebuchet MS', sans-serif";
     uploadPanel.style.transformOrigin = "left top";
     photoButtonRow.style.flexWrap = "nowrap";
     photoButtonRow.style.gap = "6px";
     titleRow.style.flexDirection = "row";
     zoomRow.style.flexDirection = "row";
     titleInput.style.width = "";
+    titleInput.style.fontSize = "";
+    titleInput.style.padding = "6px 8px";
     applyTitleBtn.style.width = "";
+    applyTitleBtn.style.padding = "6px 10px";
+    applyTitleBtn.style.fontSize = "";
     repeatZoomBtn.style.width = "";
+    repeatZoomBtn.style.padding = "6px 8px";
+    repeatZoomBtn.style.fontSize = "";
+    addPhotoBtn.style.padding = "6px 8px";
+    addPhotoBtn.style.fontSize = "";
+    replacePhotoBtn.style.padding = "6px 8px";
+    replacePhotoBtn.style.fontSize = "";
+    clearPhotoBtn.style.padding = "6px 8px";
+    clearPhotoBtn.style.fontSize = "";
+    uploadStatus.style.fontSize = "";
   }
 }
 
@@ -284,7 +312,7 @@ controls.maxPolarAngle = Math.PI - 0.01;
 controls.target.set(0, 0, -260);
 controls.update();
 
-const autoZoomDuration = 14;
+const autoZoomDuration = 10;
 const autoZoomInDuration = 2;
 const autoZoomHoldDuration = 0;
 const autoZoomStartDist = 330;
@@ -458,7 +486,7 @@ function createTitleMesh(text) {
 }
 
 const title3D = createTitleMesh(DEFAULT_TITLE_TEXT);
-title3D.position.set(0, 190, 330);
+title3D.position.set(0, 210, 330);
 orbitPivot.add(title3D);
 
 function setTitle3DText(nextTitle, persist = true) {
